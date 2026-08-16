@@ -8,101 +8,21 @@ on:
 jobs:
   bridge:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Download LJSpeech phoneme shard
+      - name: Download precomputed LJSpeech TextGrids
         run: |
           set -euxo pipefail
-          mkdir -p work out
+          mkdir -p out
           curl -L --fail --retry 4 --retry-delay 3 \
-            'https://huggingface.co/datasets/bookbot/ljspeech_phonemes/resolve/main/data/train-00000-of-00008-b30dbd8fb488aaf7.parquet?download=true' \
-            -o work/shard.parquet
-          test $(stat -c%s work/shard.parquet) -gt 400000000
-
-      - name: Decode parquet to WAVs and manifest
-        run: |
-          python -m pip install -q pyarrow
-          python - <<'PY'
-          import io, json, os, wave
-          import pyarrow.parquet as pq
-
-          src = 'work/shard.parquet'
-          root = 'out/extracted'
-          wavdir = os.path.join(root, 'wavs')
-          os.makedirs(wavdir, exist_ok=True)
-          table = pq.read_table(src)
-          print(table.schema)
-          cols = table.column_names
-          rows = table.to_pylist()
-          manifest = []
-
-          def first_present(row, names):
-              for n in names:
-                  if n in row and row[n] is not None:
-                      return row[n]
-              return None
-
-          total_seconds = 0.0
-          for i, row in enumerate(rows):
-              a = first_present(row, ['audio', 'wav', 'speech'])
-              raw = None
-              path_hint = None
-              if isinstance(a, dict):
-                  raw = a.get('bytes')
-                  path_hint = a.get('path')
-              elif isinstance(a, (bytes, bytearray)):
-                  raw = bytes(a)
-              if raw is None:
-                  raise RuntimeError(f'No audio bytes in row {i}; columns={cols}; audio_type={type(a)}')
-
-              stem = os.path.splitext(os.path.basename(path_hint or f'row_{i:05d}.wav'))[0]
-              outpath = os.path.join(wavdir, stem + '.wav')
-              with open(outpath, 'wb') as f:
-                  f.write(raw)
-
-              duration = None
-              sr = None
-              try:
-                  with wave.open(io.BytesIO(raw), 'rb') as w:
-                      sr = w.getframerate()
-                      duration = w.getnframes() / float(sr)
-                      total_seconds += duration
-              except Exception:
-                  pass
-
-              text = first_present(row, ['text', 'normalized_text', 'transcript', 'sentence'])
-              phon = first_present(row, ['phonemes', 'phoneme', 'phones', 'phonetic'])
-              rec = {
-                  'i': i, 'stem': stem, 'wav': f'wavs/{stem}.wav',
-                  'duration': duration, 'sample_rate': sr,
-                  'text': text, 'phonemes': phon,
-              }
-              # Preserve scalar metadata without embedding audio bytes.
-              extra = {}
-              for k, v in row.items():
-                  if k in ('audio','wav','speech') or k in rec:
-                      continue
-                  if isinstance(v, (str,int,float,bool)) or v is None:
-                      extra[k] = v
-              rec['extra'] = extra
-              manifest.append(rec)
-
-          with open(os.path.join(root, 'manifest.jsonl'), 'w', encoding='utf-8') as f:
-              for r in manifest:
-                  f.write(json.dumps(r, ensure_ascii=False) + '\n')
-          with open(os.path.join(root, 'schema.txt'), 'w', encoding='utf-8') as f:
-              f.write(str(table.schema))
-          with open(os.path.join(root, 'summary.json'), 'w') as f:
-              json.dump({'rows': len(rows), 'total_seconds': total_seconds, 'columns': cols}, f, indent=2)
-          print(json.dumps({'rows': len(rows), 'total_seconds': total_seconds, 'columns': cols}, indent=2))
-          PY
-          du -sh out/extracted
-          head -n 2 out/extracted/manifest.jsonl
-
-      - name: Upload decoded shard
+            'https://zenodo.org/records/7499098/files/grids.zip?download=1' \
+            -o out/grids.zip
+          ls -lh out/grids.zip
+          test $(stat -c%s out/grids.zip) -gt 30000000
+      - name: Upload alignments
         uses: actions/upload-artifact@v4
         with:
-          name: ljspeech-decoded-shard-0000
-          path: out/extracted
+          name: ljspeech-textgrids
+          path: out/grids.zip
           compression-level: 0
           retention-days: 1

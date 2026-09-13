@@ -1,5 +1,5 @@
 import type { DeviceType, PaceSample, RunResult, TestSettings } from "../types";
-import { createInitialProgress, progressReducer, recordSummary, summarizeRun } from "./reducer";
+import { createInitialProgress, progressReducer, recordSummary, runClientId, summarizeRun } from "./reducer";
 import { PROGRESS_VERSION, type LoadProgressResult, type ProgressPersistenceError, type ProgressState } from "./types";
 
 export const PROGRESS_STORAGE_KEY = "thumbtype.progress.v2";
@@ -27,7 +27,10 @@ function normalizeDevice(value: unknown): DeviceType {
 export function normalizeProgressState(value: ProgressState): ProgressState {
   return {
     ...value,
-    runs: value.runs.map((run) => ({ ...run, device: normalizeDevice(run.device) })),
+    runs: value.runs.map((run) => {
+      const device = normalizeDevice(run.device);
+      return { ...run, device, clientId: run.clientId || runClientId({ id: run.id, date: run.completedAt, device }) };
+    }),
   };
 }
 
@@ -55,7 +58,7 @@ function legacyRun(value: unknown): RunResult | null {
     ? value.samples.filter((sample): sample is PaceSample => object(sample) && finite(sample.second) && finite(sample.wpm) && finite(sample.raw) && finite(sample.errors))
     : [];
   return {
-    id: value.id, date: value.date, settings: safeSettings,
+    id: value.id, clientId: `${value.id}:${value.date}:${normalizeDevice(value.device)}`, date: value.date, settings: safeSettings,
     elapsedMs: value.elapsedMs as number, wpm: value.wpm as number, rawWpm: value.rawWpm as number,
     accuracy: value.accuracy as number, consistency: value.consistency as number,
     correct: value.correct as number, incorrect: value.incorrect as number, extra: value.extra as number,

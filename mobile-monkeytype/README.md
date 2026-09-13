@@ -25,6 +25,14 @@ and publishes `dist`. Its root URL redirects to `/mobile-monkeytype/`.
 The repository's root README and GitHub Pages domain configuration are separate.
 
 Build assets, the app manifest, and the install shortcut all use the same subpath.
+
+## Cloud account and synced stats
+
+The app works without an account and keeps local progress in the browser. When Supabase is configured, users can sign in with Google from the header or progress page. Each completed run is then stored in `public.typing_runs` and merged with local history, with RLS restricting reads and writes to the signed-in user.
+
+Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_PUBLISHABLE_KEY`. The migration in `supabase/migrations/20260913120000_create_typing_runs.sql` must be applied to the Supabase project. In Supabase Auth, enable Google and allow the site URL plus `https://theperpendicularity.me/**` as redirect URLs. Google’s web OAuth client should use `https://theperpendicularity.me` as an authorized JavaScript origin and the Supabase callback URL shown in the Auth provider settings as its authorized redirect URI.
+
+Never put a Supabase service-role key in frontend environment variables; the publishable/anon key is the only client-side key this app expects.
 Future changes pushed to this folder on `main` deploy through the Vercel GitHub connection.
 
 ## Included

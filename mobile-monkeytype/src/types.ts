@@ -30,6 +30,8 @@ export interface FixRecord {
 
 export interface RunResult {
   id: number;
+  /** Stable id used when the run is synced to a signed-in account. */
+  clientId?: string;
   date: string;
   device: DeviceType;
   settings: TestSettings;

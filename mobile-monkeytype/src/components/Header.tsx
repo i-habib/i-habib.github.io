@@ -1,4 +1,5 @@
-import { BarChart3, Info, Keyboard, Settings, Sparkles } from "lucide-react";
+import { BarChart3, Info, Keyboard, LogIn, LogOut, Settings, Sparkles, UserRound } from "lucide-react";
+import type { AuthState } from "../auth/useAuth";
 import { Brand } from "./Brand";
 
 interface HeaderProps {
@@ -7,6 +8,7 @@ interface HeaderProps {
   onHistory: () => void;
   onAbout: () => void;
   onSettings: () => void;
+  auth: AuthState;
 }
 
 function HeaderButton({ label, children, onClick }: React.PropsWithChildren<{ label: string; onClick: () => void }>) {
@@ -17,7 +19,8 @@ function HeaderButton({ label, children, onClick }: React.PropsWithChildren<{ la
   );
 }
 
-export function Header({ hidden = false, onHome, onHistory, onAbout, onSettings }: HeaderProps) {
+export function Header({ hidden = false, onHome, onHistory, onAbout, onSettings, auth }: HeaderProps) {
+  const accountLabel = auth.user?.email?.split("@")[0] || "account";
   return (
     <header className="site-header chrome-fade" aria-hidden={hidden || undefined} inert={hidden ? true : undefined}>
       <button className="brand-button" type="button" onClick={onHome}>
@@ -31,6 +34,15 @@ export function Header({ hidden = false, onHome, onHistory, onAbout, onSettings 
       </nav>
       <nav className="account-nav" aria-label="Keyboard status">
         <span className="native-badge" title="Native autocorrect is enabled"><Sparkles /><span>native</span></span>
+        {auth.user ? (
+          <button className="auth-button signed-in" type="button" onClick={() => void auth.signOut()} title={`Sign out of ${accountLabel}`}>
+            <UserRound /><span>{accountLabel}</span><LogOut />
+          </button>
+        ) : (
+          <button className="auth-button" type="button" onClick={() => void auth.signInWithGoogle()} disabled={auth.loading} title="Sign in with Google">
+            <LogIn /><span>{auth.loading ? "loading" : "sign in"}</span>
+          </button>
+        )}
       </nav>
     </header>
   );

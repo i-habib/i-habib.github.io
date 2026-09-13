@@ -148,6 +148,12 @@ button:focus-visible, a:focus-visible, textarea:focus-visible {
 .header-button svg { width: 18px; stroke-width: 2.2; }
 .native-badge { display: inline-flex; align-items: center; gap: 6px; color: var(--sub); font-size: 11px; }
 .native-badge svg { width: 15px; color: var(--main); }
+.auth-button { min-height: 32px; padding: 0 9px; display: inline-flex; align-items: center; gap: 6px; color: var(--bg); background: var(--main); border: 0; border-radius: 7px; font-size: 10px; cursor: pointer; }
+.auth-button:hover { filter: brightness(1.08); }
+.auth-button:disabled { opacity: .5; cursor: wait; }
+.auth-button.signed-in { color: var(--text); background: var(--sub-alt); }
+.auth-button svg { width: 14px; }
+.auth-button.signed-in svg:last-child { width: 12px; color: var(--sub); }
 
 .main-content {
   width: 100%;
@@ -423,6 +429,13 @@ button:focus-visible, a:focus-visible, textarea:focus-visible {
 .progress-heading > div > span svg { width: 14px; }
 .progress-heading h1 { margin: 7px 0 8px; font: 600 clamp(34px, 5vw, 54px)/1.08 "Lexend Deca", sans-serif; letter-spacing: -.05em; }
 .progress-heading p { margin: 0; color: var(--sub); font-size: 11px; }
+.cloud-status { margin-top: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--sub); font-size: 9px; }
+.cloud-status-copy { display: inline-flex; align-items: center; gap: 6px; }
+.cloud-dot { width: 7px; height: 7px; display: inline-block; background: var(--main); border-radius: 50%; }
+.cloud-dot.syncing { animation: cloud-pulse 1s ease-in-out infinite; }
+.cloud-dot.error { background: var(--error); }
+.cloud-dot.local { background: var(--sub); }
+.cloud-status button { padding: 3px 0; color: var(--main); background: transparent; border: 0; font-size: inherit; cursor: pointer; }
 .progress-heading > button, .progress-empty button { min-height: 42px; padding: 0 16px; display: flex; align-items: center; gap: 8px; color: var(--bg); background: var(--main); border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
 .progress-heading > button svg { width: 16px; }
 .storage-warning { margin-bottom: 20px; padding: 12px; color: var(--error); background: var(--sub-alt); border-radius: 8px; font-size: 10px; line-height: 1.5; }
@@ -601,6 +614,7 @@ button:focus-visible, a:focus-visible, textarea:focus-visible {
 @keyframes correction-flash { from { color: var(--main); text-decoration: underline dotted 2px; text-underline-offset: 6px; } }
 @keyframes backdrop-in { from { opacity: 0; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(16px); } }
+@keyframes cloud-pulse { 50% { opacity: .35; } }
 
 @media (max-width: 848px) {
   .result-primary { grid-template-columns: 1fr; gap: 20px; }
@@ -669,7 +683,9 @@ button:focus-visible, a:focus-visible, textarea:focus-visible {
   .promo-bar { min-height: 54px; padding: 8px 45px 8px 14px; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; }
   .app-grid { min-height: var(--visual-height); padding-top: 32px; }
   .has-promo .app-grid { min-height: calc(var(--visual-height) - 54px); }
-  .account-nav { display: none; }
+  .account-nav { display: flex; }
+  .auth-button { width: 34px; padding-inline: 0; justify-content: center; }
+  .auth-button span { display: none; }
   .typing-test { grid-template-rows: 28px auto 48px 20px; }
   .test-meta { padding-inline: 2px; }
   .focus-message { font-size: 13px; }

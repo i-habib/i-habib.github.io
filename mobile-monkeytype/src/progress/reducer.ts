@@ -32,6 +32,10 @@ export function createInitialProgress(now = new Date()): ProgressState {
   };
 }
 
+export function runClientId(run: Pick<RunResult, "id" | "date" | "device">): string {
+  return `${run.id}:${run.date}:${run.device}`;
+}
+
 export function storedSettings(settings: TestSettings): StoredTestSettings {
   return {
     mode: settings.mode,
@@ -60,6 +64,7 @@ export function variantKey(settings: Pick<TestSettings, "mode" | "duration" | "w
 export function summarizeRun(run: RunResult): RunSummary {
   return {
     id: run.id,
+    clientId: run.clientId ?? runClientId(run),
     completedAt: run.date,
     localDay: localDay(run.date),
     device: run.device,
@@ -94,11 +99,12 @@ function addTotals(base: LifetimeTotals, run: RunSummary): LifetimeTotals {
 }
 
 export function recordSummary(state: ProgressState, run: RunSummary, samples: RunResult["samples"] = []): ProgressState {
-  if (state.runs.some(({ id }) => id === run.id)) return state;
+  if (state.runs.some((existing) => existing.clientId === run.clientId)) return state;
   const runs = [run, ...state.runs].slice(0, MAX_RECENT_RUNS);
-  const detailIds = new Set(runs.slice(0, MAX_RUN_DETAILS).map(({ id }) => String(id)));
+  const detailIds = new Set(runs.slice(0, MAX_RUN_DETAILS).flatMap(({ id, clientId }) => [clientId, String(id)]));
+  const detailKey = run.clientId;
   const details = Object.fromEntries(
-    Object.entries({ ...state.details, ...(samples.length ? { [String(run.id)]: samples } : {}) })
+    Object.entries({ ...state.details, ...(samples.length ? { [detailKey]: samples } : {}) })
       .filter(([id]) => detailIds.has(id)),
   );
   const previousDay = state.days[run.localDay] ?? { tests: 0, validTests: 0, timeMs: 0, typedChars: 0, fixes: 0, bestWpm: 0, wpmTotal: 0, accuracyTotal: 0, consistencyTotal: 0 };
@@ -136,7 +142,7 @@ export function mergeProgress(state: ProgressState, imported: ProgressState): Pr
     .slice()
     .reverse()
     .reduce(
-      (next, run) => recordSummary(next, run, imported.details[String(run.id)] ?? []),
+      (next, run) => recordSummary(next, run, imported.details[run.clientId] ?? imported.details[String(run.id)] ?? []),
       state,
     );
 }

@@ -14,6 +14,7 @@ export function useProgress(storage: Storage = localStorage) {
     stateRef.current = next;
     setState(next);
     setPersistenceError(saveProgress(storage, next));
+    return next;
   }, [storage]);
   return {
     state,

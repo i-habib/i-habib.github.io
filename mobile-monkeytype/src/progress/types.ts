@@ -15,6 +15,8 @@ export interface StoredTestSettings {
 
 export interface RunSummary {
   id: number;
+  /** Stable across browsers so cloud sync does not duplicate local runs. */
+  clientId: string;
   completedAt: string;
   localDay: string;
   device: DeviceType;

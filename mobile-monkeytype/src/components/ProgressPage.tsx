@@ -4,6 +4,8 @@ import { selectOverview, selectStreak } from "../progress";
 import type { DeviceType } from "../types";
 import type { ProgressStore, RunSummary } from "../progress";
 import { ProgressChart } from "./ProgressChart";
+import type { AuthState } from "../auth/useAuth";
+import type { CloudStatus } from "../progress/useCloudProgress";
 
 interface ProgressPageProps {
   progress: ProgressStore;
@@ -14,6 +16,10 @@ interface ProgressPageProps {
   onResetAll: () => void;
   onExport: () => void;
   onImport: (file: File) => Promise<void> | void;
+  auth: AuthState;
+  cloudStatus: CloudStatus;
+  cloudError: string | null;
+  onCloudSync: () => void;
 }
 
 function formatVariant(settings: RunSummary["settings"]) {
@@ -53,7 +59,7 @@ function shortDay(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function ProgressPage({ progress, storageError, transferError, onNewTest, onClearHistory, onResetAll, onExport, onImport }: ProgressPageProps) {
+export function ProgressPage({ progress, storageError, transferError, onNewTest, onClearHistory, onResetAll, onExport, onImport, auth, cloudStatus, cloudError, onCloudSync }: ProgressPageProps) {
   const [filter, setFilter] = useState("all");
   const [deviceFilter, setDeviceFilter] = useState<"all" | DeviceType>("all");
   const [metric, setMetric] = useState<"wpm" | "accuracy">("wpm");
@@ -117,13 +123,28 @@ export function ProgressPage({ progress, storageError, transferError, onNewTest,
         <div>
           <span><Activity /> local profile</span>
           <h1 id="progress-title">your progress</h1>
-          <p>private, on-device stats for every completed run.</p>
+          <p>{auth.user ? "your synced stats, available across devices." : "private, on-device stats for every completed run."}</p>
+          <div className="cloud-status" role="status">
+            {auth.user ? (
+              <>
+                <span className="cloud-status-copy"><span className={`cloud-dot ${cloudStatus}`} />{cloudStatus === "syncing" ? "syncing your runs" : cloudStatus === "error" ? "cloud sync needs attention" : "synced"} · {auth.user.email}</span>
+                <button type="button" onClick={onCloudSync}>sync now</button>
+              </>
+            ) : auth.configured ? (
+              <>
+                <span className="cloud-status-copy"><span className="cloud-dot local" />local profile</span>
+                <button type="button" onClick={() => void auth.signInWithGoogle()}>sign in with Google</button>
+              </>
+            ) : <span className="cloud-status-copy"><span className="cloud-dot local" />local profile · cloud sync is not configured</span>}
+          </div>
         </div>
         <button type="button" onClick={onNewTest}><Keyboard /> new test</button>
       </div>
 
       {storageError && <div className="storage-warning" role="status">progress is available now, but this browser could not save it: {storageError}</div>}
       {transferError && <div className="storage-warning" role="status">{transferError}</div>}
+      {auth.error && <div className="storage-warning" role="status">account: {auth.error}</div>}
+      {cloudError && <div className="storage-warning" role="status">cloud sync: {cloudError}</div>}
 
       {!progress.lifetime.tests ? (
         <div className="progress-empty">

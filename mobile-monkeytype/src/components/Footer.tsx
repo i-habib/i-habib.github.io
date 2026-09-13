@@ -12,7 +12,7 @@ export function Footer({ hidden = false, onAbout }: FooterProps) {
         <button type="button" onClick={onAbout}><Info /> about</button>
         <a href="https://github.com/monkeytypegame/monkeytype" target="_blank" rel="noreferrer"><Code2 /> inspiration</a>
         <span><Keyboard /> mobile first</span>
-        <span><ShieldCheck /> local only</span>
+        <span><ShieldCheck /> private by default</span>
       </div>
       <div className="footer-meta"><span><Palette /> serika dark</span><span>v1.0.0</span></div>
     </footer>

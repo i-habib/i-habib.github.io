@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { X } from "lucide-react";
+import { useAuth } from "./auth/useAuth";
 import { buildPassage, DEFAULT_CUSTOM_TEXT } from "./corpus";
 import { AboutModal } from "./components/AboutModal";
 import { Footer } from "./components/Footer";
@@ -12,6 +13,7 @@ import { TypingSurface } from "./components/TypingSurface";
 import { detectDeviceType } from "./device";
 import { useVisualViewport } from "./hooks/useVisualViewport";
 import { selectPersonalBest, useProgress } from "./progress";
+import { useCloudProgress } from "./progress/useCloudProgress";
 import { downloadProgress, parseTransfer } from "./progress/transfer";
 import type { RunResult, TestSettings } from "./types";
 
@@ -39,7 +41,9 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
   const viewport = useVisualViewport();
+  const auth = useAuth();
   const { progress, storageError, recordRun, importProgress, clearHistory, resetAll } = useProgress();
+  const cloud = useCloudProgress(auth.user, progress, importProgress);
 
   const begin = useCallback((nextSettings = settings, repeat = false) => {
     setView("test");
@@ -59,17 +63,30 @@ export default function App() {
     const resultWithDevice = { ...nextResult, device: detectDeviceType() };
     setResult(resultWithDevice);
     recordRun(resultWithDevice);
-  }, [recordRun]);
+    void cloud.saveRun(resultWithDevice);
+  }, [cloud.saveRun, recordRun]);
 
   const exportData = useCallback(() => downloadProgress(progress), [progress]);
   const importData = useCallback(async (file: File) => {
     try {
-      importProgress(parseTransfer(await file.text()));
+      const imported = parseTransfer(await file.text());
+      const next = importProgress(imported);
+      void cloud.syncNow(next);
       setTransferError(null);
     } catch (error) {
       setTransferError(error instanceof Error ? error.message : "Could not import that file.");
     }
-  }, [importProgress]);
+  }, [cloud, importProgress]);
+
+  const clearHistoryAndCloud = useCallback(() => {
+    clearHistory();
+    void cloud.clearRemote();
+  }, [clearHistory, cloud.clearRemote]);
+
+  const resetAllAndCloud = useCallback(() => {
+    resetAll();
+    void cloud.clearRemote();
+  }, [cloud.clearRemote, resetAll]);
 
   const currentBest = result ? selectPersonalBest(progress, result.settings) : null;
 
@@ -88,6 +105,7 @@ export default function App() {
           onHistory={() => { setActive(false); setResult(null); setView("progress"); }}
           onAbout={() => setAboutOpen(true)}
           onSettings={() => setSettingsOpen(true)}
+          auth={auth}
         />
         <main className="main-content">
           {view === "progress" ? (
@@ -96,10 +114,14 @@ export default function App() {
               storageError={storageError}
               transferError={transferError}
               onNewTest={() => begin()}
-              onClearHistory={clearHistory}
-              onResetAll={resetAll}
+              onClearHistory={clearHistoryAndCloud}
+              onResetAll={resetAllAndCloud}
               onExport={exportData}
               onImport={importData}
+              auth={auth}
+              cloudStatus={cloud.status}
+              cloudError={cloud.error}
+              onCloudSync={() => void cloud.syncNow(progress)}
             />
           ) : !result ? (
             <>
